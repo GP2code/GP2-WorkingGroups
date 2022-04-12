@@ -2,10 +2,9 @@
 
 `GP2 ❤️ Open Science 😍`
 
- - **Project:** Trans-ethnic Meta-Analysis and Fine-Mapping
- -  in PD
+ - **Project:** Trans-ancestry Meta-Analysis and Fine-Mapping in PD
  - **Authors:** Jeff Kim (NIH/QMUL), Dan Vitale (NIH/DTi), Cornelis Blauwendraat (NIH), Mike Nalls (NIH/DTi), Alastair Noyce (QMUL), and Andrew Singleton (NIH) on behalf of the Complex Disease Data Analysis Working Group (CD-DAWG) at the Global Parkinson's Genetics Program (GP2)
- - **Date Last Updated:** Jan 2022 
+ - **Date Last Updated:** April 2022 
     - **Update Description:** Starting README
 
 ---
