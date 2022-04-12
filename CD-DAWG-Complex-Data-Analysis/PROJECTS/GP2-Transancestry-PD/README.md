@@ -1,4 +1,4 @@
-# Trans-Ethnic Meta-Analysis and Fine-Mapping in Parkinson's Disease 
+# Trans-Ancestry Meta-Analysis and Fine-Mapping in Parkinson's Disease 
 
 `GP2 ❤️ Open Science 😍`
 
