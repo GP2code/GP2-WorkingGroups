@@ -24,13 +24,13 @@ The Monogenic Network - Data Analysis Working Group (MN-DAWG) executes and coord
 
 <a id="1"></a>
 ## 1. Objectives of MN-DAWG
-a. Study genotype-phenotype corrrelations in Parkinson's Disease
-b. Discover novel genetic causes of Parkinson's Disease
+a. Study genotype-phenotype corrrelations in Parkinson's Disease 
+b. Discover novel genetic causes of Parkinson's Disease 
 
 ### 1A. Protocols Manuscript 
 Protocols manuscript is ***in preparation***, and will be linked here when published.
 
 ### 1B. Workflow Diagram 
-![My Image](image/GP2 workflow.jpg)
+![My Image](https://github.com/zihhuafang/GP2-WorkingGroups/blob/main/MN-DAWG-Monogenic-Data-Analysis/image/GP2%20workflow.png)
 
 
