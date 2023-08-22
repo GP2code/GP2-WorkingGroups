@@ -1,0 +1,6 @@
+channels:
+  - r
+  - bioconda
+dependencies:
+  - r=3.5.1
+  - r-ggplot2

@@ -1,0 +1,220 @@
+#!/usr/bin/env python
+import glob
+import os
+import pandas as pd
+from snakemake.utils import min_version
+from natsort import natsorted, ns
+
+shell.prefix("set -o pipefail; umask 002; ")  # set g+w
+
+##include rules
+include: "rules/CADD.smk"
+
+#Snakemake config
+min_version("5.5")
+configfile: "configs/config.yaml"
+
+#Parse wildcards for the main Snakemake
+chr_list = list(range(1,23))+["X", "Y"]
+chr_id= ["chr" + str(i) for i in chr_list]
+
+#Parse wildcards
+df=pd.read_csv("inputs/shard_keep.csv")
+chr_dict={k: g["shard"].tolist() for k,g in df.groupby("chr")}
+
+localrules: all
+
+rule all:
+    input:
+        [f'final_vcfs/{chr}/{shard}.vcf.gz' for chr, shards in chr_dict.items() for shard in shards],
+        expand("final_vcfs/{chr}_GP2_annotate.vcf.gz", chr=chr_dict.keys())
+
+rule vep:
+    input:
+        vcf = "vcfs/filtered/{chr}/{shard}.vcf.gz"
+    output:
+        vcf = "vcfs/vep/{chr}/{shard}.vcf.gz"
+    container:
+        "docker://zihhuafang/ensembl_vep_loftee:v107"
+    threads: 2
+    resources:
+        nodes = 1
+    shell:
+        """
+        vep \
+        -i {input.vcf} \
+        --ASSEMBLY GRCh38 \
+        --buffer_size 50000 \
+        --fasta {config[docker_ref_genome]} \
+        --sift b \
+        --polyphen b \
+        --ccds \
+        --hgvs \
+        --symbol \
+        --numbers \
+        --domains \
+        --regulatory \
+        --canonical \
+        --protein \
+        --biotype \
+        --af \
+        --af_1kg \
+        --af_gnomade \
+        --max_af \
+        --pubmed \
+        --uniprot \
+        --mane \
+        --tsl \
+        --appris \
+        --variant_class \
+        --gene_phenotype \
+        --mirna \
+        --var_synonyms \
+        --check_existing \
+        --nearest symbol \
+        --terms SO \
+        --check_existing \
+        --clin_sig_allele 1 \
+        --force_overwrite \
+        --cache \
+        --pick \
+        --pick_order biotype,mane,canonical,appris,tsl,rank,ccds,length \
+        --offline \
+        --dir_cache /opt/vep/.vep  \
+        --dir_plugins /opt/vep/.vep/Plugins/ \
+        --plugin UTRannotator,/opt/vep/.vep/vep_annotation/uORF_5UTR_GRCh38_PUBLIC.txt \
+        --plugin SpliceAI,snv=/opt/vep/.vep/vep_annotation/spliceai_scores.masked.indel.hg38.vcf.gz,indel=/opt/vep/.vep/vep_annotation/spliceai_scores.masked.indel.hg38.vcf.gz \
+        --plugin SpliceRegion,Extended \
+        --plugin TSSDistance \
+        --plugin NMD \
+        --plugin Downstream \
+        --plugin DisGeNET,file=/opt/vep/.vep/vep_annotation/all_variant_disease_pmid_associations_final.tsv.gz,disease=1 \
+        --plugin dbNSFP,/opt/vep/.vep/vep_annotation/dbNSFP4.3a_grch38.gz,Ensembl_transcriptid,MetaRNN_score,MPC_score,LRT_score,GERP++_RS,FATHMM_score,fathmm-MKL_coding_score,DANN_score,REVEL_score,PrimateAI_score,MutPred_score,GTEx_V8_gene,GTEx_V8_tissue,Geuvadis_eQTL_target_gene,gnomAD_genomes_controls_and_biobanks_nhomalt \
+        --plugin LoF,loftee_path:/opt/vep/.vep/Plugins/loftee_hg38,\
+human_ancestor_fa:/opt/vep/.vep/Plugins/loftee_hg38/human_ancestor.fa.gz,\
+conservation_file:/opt/vep/.vep/Plugins/loftee_hg38/loftee.sql,\
+gerp_bigwig:/opt/vep/.vep/Plugins/loftee_hg38/gerp_conservation_scores.homo_sapiens.GRCh38.bw \
+        --custom {config[clinvar]},ClinVar,vcf,exact,0,CLNSIG,CLNDN \
+        --custom regulatory_elements_annotation/brain_all_hg38_liftover_sorted.bed.gz,brain_celltype,bed,overlap \
+        --custom regulatory_elements_annotation/GREEN_DB.sorted.bed.gz,green_db_regulatory_elements,bed,overlap \
+        -o {output.vcf} \
+        --compress_output bgzip \
+        --vcf \
+        --no_stats
+        """
+
+
+rule prep_vcf_CADD:
+    input:
+        "vcfs/filtered/{chr}/{shard}.vcf.gz"
+    output:
+        temp("CADD_input/{chr}/{shard}.vcf")
+    threads: 1
+    resources:
+        nodes = 1
+    shell:
+        """
+        zcat {input} | awk '{{gsub(/^chr/,""); print}}' > {output}
+        """
+
+rule gcount_case_control:
+    input:
+        vcf = "vcfs/filtered/{chr}/{shard}.vcf.gz",
+        tfam = "inputs/gp2_all.tfam"
+    output:
+        "vcfs/gcount/{chr}/{shard}.vcf.gz"
+    conda:
+        "envs/tools.yml"
+    threads: 1
+    resources:
+        nodes = 1
+    shell:
+        """
+        #get n of homalt, n of het and allele count in cases and controls
+        SnpSift caseControl -tfam {input.tfam} {input.vcf} | bgzip -c > {output} && tabix -p vcf {output}
+        """
+
+rule agg_gcount:
+    input:
+        lambda wildcards: expand("vcfs/gcount/{{chr}}/{shard}.vcf.gz",chr= chr_dict.keys(), shard=chr_dict.get(wildcards.chr))
+    output:
+        "vcfs/gcount/{chr}.vcf.gz"
+    conda:
+        "envs/tools.yml"
+    threads: 5
+    resources:
+        nodes = 1
+    shell:
+        """
+        bcftools concat {input} \
+                 --threads {threads} \
+                 -O z \
+                 -o {output}
+
+        tabix -p vcf --force {output}
+        """
+
+rule add_anno_vcf:
+    input:
+        vcf = rules.vep.output,
+        vcfanno_conf = "vcfanno_conf/vcfanno_{chr}.conf",
+        CADD_score= "CADD/{chr}.tsv.gz",
+        gcount = "vcfs/gcount/{chr}.vcf.gz"
+    output:
+        anno_vcf="vcfs/vcfanno/{chr}/{shard}.vcf.gz"
+    conda:
+        "envs/tools.yml"
+    threads: 1
+    resources:
+        nodes = 1
+    shell:
+        """
+        vcfanno -p {threads} {input.vcfanno_conf} {input.vcf} \
+        | bgzip -c > {output.anno_vcf}
+
+        tabix -p vcf --force {output.anno_vcf}
+        """
+
+rule slivar_gnotate:
+    input:
+        vcf = "vcfs/vcfanno/{chr}/{shard}.vcf.gz"
+    output:
+        "final_vcfs/{chr}/{shard}.vcf.gz"
+    container:
+        "docker://zihhuafang/slivar_modified:0.2.7"
+    threads:
+        1
+    resources:
+        nodes = 1
+    shell:
+        """
+        slivar expr --js /mnt/slivar/slivar-functions.js \
+                    --pass-only \
+                    -g /mnt/slivar/TOPMed_freeze8_PASS.zip \
+                    -g /mnt/slivar/gnomADv3.1.2_wfilter.zip \
+                    --info 'variant.ALT[0] != "*" && variant.call_rate >= 0.95' \
+                    --vcf {input.vcf} \
+        | bgzip -c > {output}
+ 
+        tabix -p vcf --force {output}
+        """
+
+rule Gathervcf:
+    input:
+        lambda wildcards: expand("final_vcfs/{{chr}}/{shard}.vcf.gz", chr= chr_dict.keys(), shard=chr_dict.get(wildcards.chr))
+    output:
+        "final_vcfs/{chr}_GP2_annotate.vcf.gz"
+    conda:
+        "envs/tools.yml"
+    threads: 10
+    resources:
+        nodes = 1
+    shell:
+        """
+        bcftools concat {input} \
+                 --threads {threads} \
+                 -O z \
+                 -o {output} 
+
+        tabix -p vcf --force {output} 
+        """

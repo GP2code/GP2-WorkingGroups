@@ -1,0 +1,22 @@
+reason: True
+rerun-incomplete: True
+keep-going: True
+printshellcmds: True
+local-cores: 5
+jobs: 90
+max-jobs-per-second: 1
+use-conda: True
+#rerun-trigger: "mtime"
+conda-frontend: mamba
+latency-wait: 120
+use-singularity: True
+singularity-args: '-H /mnt/vol009/GP2/vep:$HOME --bind /mnt/vol009/hg38_vep107:/mnt --bind /mnt/vol009/hg38_vep107:/opt/vep/.vep'
+cluster: 
+  mkdir -p slurm/{rule} &&
+  sbatch --cpus-per-task={threads}
+         --output=slurm/{rule}/{rule}_{wildcards}-%j.log
+         --error=slurm/{rule}/{rule}_{wildcards}-%j.err
+         --job-name={rule}-{wildcards}
+         --exclude tu-svr-001-red.dzne.de 
+default-resources:
+  - threads=1

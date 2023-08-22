@@ -1,0 +1,18 @@
+name: tool
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - bcftools=1.13=h3a49de5_0
+  - bzip2=1.0.8=h7f98852_4
+  - htslib=1.13=h9093b5e_0
+  - matplotlib-base=3.4.3=py39h2fa2bec_0
+  - numpy=1.21.2=py39hdbf815f_0
+  - slivar=0.2.7=h2eeb373_0
+  - snpsift=4.3.1t=hdfd78af_3
+  - pandas=1.3.2=py39hde0f152_0
+  - plink=1.90b6.21=h779adbc_1
+  - plink2=2.00a2.3=h712d239_1
+  - vcfanno=0.3.2=0
+  - vcftools=0.1.16=h9a82719_5

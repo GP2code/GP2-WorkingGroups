@@ -1,0 +1,11 @@
+ref_genome: /mnt/vol009/hg38_vep107/vep_annotation/Homo_sapiens_assembly38.fasta
+docker_ref_genome: /mnt/vep_annotation/Homo_sapiens_assembly38.fasta
+clinvar: /opt/vep/.vep/vep_annotation/clinvar_20230722.vcf.gz
+gp2_ped: inputs/gp2_all.ped
+seq_fam: inputs/gp2_all_fams.ped
+seq_center: inputs/gp2_all_centers.ped
+screening_panel_bed: inputs/panels/MN_WGS_screening_panel_hg38_MDS_PanelAPP_additional.bed
+screening_panel_list: inputs/panels/MN_WGS_screening_panel_hg38_MDS_PanelAPP_additional.list
+unconfirmed_panel_list:  inputs/panels/MN_WGS_unconfirmed_141122.list
+gene_panel_all: inputs/panels/MN_WGS_all_panels_hg38.bed
+
